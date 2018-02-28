@@ -23,16 +23,16 @@ spam_word <- t(read.csv(paste(wd, "/Spammy_wordslist.csv", sep = ""), header = F
 
 # Function to check if a string contains spam word
 contains_word <- function(string, word) {
-  word_count <- sum(str_count(string, word))
+  word_count <- sum(str_count(string, regex(word, ignore_case = T)))
   return (word_count > 0)
 }
 
 # Function to check if an email contains spammy word in a known word list
 # Return true if there less than two spammy words appear in the email, false otherwise
-check_spam_word <- function(i) {
+check_spam_list <- function(i) {
   spam_count <- double()
   for (j in 1:length(spam_word)) {
-    spam_count[j] <- sum(str_count(training.emails[[i]], spam_word[j]))
+    spam_count[j] <- sum(str_count(training.emails[[i]], regex(spam_word[j], ignore_case = T)))
   }
   return (sum(spam_count >= 1) < 2)
 }
@@ -50,7 +50,7 @@ check_reply <- function(i) {
 
 # Function to count the number of images in an email
 count_image <- function(i) {
-  image_count <- sum(str_count(training.emails[[i]], "<IMG|<img"))
+  image_count <- sum(str_count(training.emails[[i]], regex("<IMG", ignore_case = T)))
   return (image_count)
 }
 
@@ -85,8 +85,8 @@ check_punc <- function(i) {
 
 # Function to check whether the subject of an email contains the word "spam"
 # Return true if the word exists in the subject, false otherwise
-check_spamword <- function(i) {
-  return (contains_word(extract_subject(i), "spam") | contains_word(extract_subject(i), "SPAM"))
+check_spam_subject <- function(i) {
+  return (contains_word(extract_subject(i), "spam"))
 }
 
 # Function to extract the reply-to from an email
@@ -107,13 +107,24 @@ check_replyto <- function(i) {
 }
 
 # Check conditions for each email in the sample
-for (i in 1:length(training.names)){
-  x[i, 1] <- check_spam_word(i) # Check spammy words
-  x[i, 2] <- check_reply(i) # Check replies
-  x[i, 3] <- check_image(i) # Check number of images
-  x[i, 4] <- check_punc(i) # Check subject number of punctuations
-  x[i, 5] <- check_spamword(i) # Check whether subject contains "spam"
-  x[i, 6] <- check_replyto(i) # Check reply-to address
+for (i in 1:length(training.names)) {
+  numSpanWords <- length(spam_word)
+  for (j in 1:numSpanWords) {
+    x[i, j] <- !contains_word(training.emails[[i]], spam_word[j])
+    names(x)[j] <- paste("containsSpamWord", j, sep = "")
+  }
+  # x[i, numSpanWords] <- check_spam_word(i) # Check spammy words
+  x[i, numSpanWords + 1] <- check_reply(i) # Check replies
+  x[i, numSpanWords + 2] <- check_image(i) # Check number of images
+  x[i, numSpanWords + 3] <- check_punc(i) # Check subject number of punctuations
+  x[i, numSpanWords + 4] <- check_spam_subject(i) # Check whether subject contains "spam"
+  x[i, numSpanWords + 5] <- check_replyto(i) # Check reply-to address
+  
+  names(x)[numSpanWords + 1] <- "checkReply"
+  names(x)[numSpanWords + 2] <- "checkImage"
+  names(x)[numSpanWords + 3] <- "checkPunc"
+  names(x)[numSpanWords + 4] <- "checkSpamSubject"
+  names(x)[numSpanWords + 5] <- "checkReplyTo"
 }
 
 #You will use the above type of search to create a matrix of 20 or more binary
@@ -122,3 +133,5 @@ for (i in 1:length(training.names)){
 # Load training labels
 labels <- read.table(paste(wd, "/SPAMData/SPAMTrain.label", sep = ""))
 
+# Write df to CSV
+write.csv(x, file = paste(wd, "/classifiers.csv", sep = ""))
