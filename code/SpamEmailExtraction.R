@@ -63,7 +63,11 @@ check_image <- function(i) {
 # Function to extract the subject from an email
 extract_subject <- function(i) {
   condition <- !is.na(str_extract(training.emails[[i]], "^Subject:.+$"))
-  subject_line <- training.emails[[i]][(min(which(condition == T)))]
+  index <- which(condition == T)
+  if (length(index) == 0L) {
+    return ("")
+  }
+  subject_line <- training.emails[[i]][(min(index))]
   return (substring(subject_line, 10))
 }
 
@@ -85,6 +89,23 @@ check_spamword <- function(i) {
   return (contains_word(extract_subject(i), "spam") | contains_word(extract_subject(i), "SPAM"))
 }
 
+# Function to extract the reply-to from an email
+extract_replyto <- function(i) {
+  condition <- !is.na(str_extract(training.emails[[i]], "^Reply-To:.+$"))
+  index <- which(condition == T)
+  if (length(index) == 0L) {
+    return ("")
+  }
+  subject_line <- training.emails[[i]][(min(index))]
+  return (substring(subject_line, 11))
+}
+
+# Function to check whether there is a reply-to address
+# Return true if a reply-to address does not exist, false otherwise
+check_replyto <- function(i) {
+  return (nchar(extract_replyto(i)) == 0)
+}
+
 # Check conditions for each email in the sample
 for (i in 1:length(training.names)){
   x[i, 1] <- check_spam_word(i) # Check spammy words
@@ -92,6 +113,7 @@ for (i in 1:length(training.names)){
   x[i, 3] <- check_image(i) # Check number of images
   x[i, 4] <- check_punc(i) # Check subject number of punctuations
   x[i, 5] <- check_spamword(i) # Check whether subject contains "spam"
+  x[i, 6] <- check_replyto(i) # Check reply-to address
 }
 
 #You will use the above type of search to create a matrix of 20 or more binary
