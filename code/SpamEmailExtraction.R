@@ -21,9 +21,9 @@ library(stringr)
 x <- data.frame()
 spam_word <- t(read.csv(paste(wd, "/Spammy_wordslist.csv", sep = ""), header = F))
 
-# Function to check if an email contains spam word
-contains_word <- function(i, word) {
-  word_count <- sum(str_count(training.emails[[i]], word))
+# Function to check if a string contains spam word
+contains_word <- function(string, word) {
+  word_count <- sum(str_count(string, word))
   return (word_count > 0)
 }
 
@@ -79,12 +79,19 @@ check_punc <- function(i) {
   return (count_punc(i) < 2)
 }
 
+# Function to check whether the subject of an email contains the word "spam"
+# Return true if the word exists in the subject, false otherwise
+check_spamword <- function(i) {
+  return (contains_word(extract_subject(i), "spam") | contains_word(extract_subject(i), "SPAM"))
+}
+
 # Check conditions for each email in the sample
 for (i in 1:length(training.names)){
-  x[i, 1] <- check_spam_word(i) # Check Spammy Word
+  x[i, 1] <- check_spam_word(i) # Check spammy words
   x[i, 2] <- check_reply(i) # Check replies
   x[i, 3] <- check_image(i) # Check number of images
-  x[i, 4] <- check_punc(i) # Check number of punctuations
+  x[i, 4] <- check_punc(i) # Check subject number of punctuations
+  x[i, 5] <- check_spamword(i) # Check whether subject contains "spam"
 }
 
 #You will use the above type of search to create a matrix of 20 or more binary
